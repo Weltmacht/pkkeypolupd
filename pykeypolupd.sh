@@ -43,5 +43,4 @@ if not statement_exists:
     print(json.dumps(current_policy))
 else:
     sys.exit(1)
-" > updated_policy.json
-aws kms put-key-policy --key-id $KEYID_EBS --policy-name default --policy file://updated_policy.json
+" > updated_policy.json && aws kms put-key-policy --key-id $KEYID_EBS --policy-name default --policy file://updated_policy.json
