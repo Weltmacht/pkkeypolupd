@@ -1,16 +1,15 @@
 #!/bin/bash
 
-if [ $# -lt 1 ]
-  then
-    echo "Provide alias in format alias/<aliasname>.  No action taken."
+if [ $# -lt 1 ]; then
+    echo "Provide alias in format alias/<aliasname>. No action taken."
     exit 1
 fi
 
 KEYID_EBS=$(aws kms describe-key --key-id $1 --query 'KeyMetadata.KeyId' --output text)
-aws kms get-key-policy --key-id $KEYID_EBS --policy-name default --output text --query Policy |
+
+updated_policy=$(aws kms get-key-policy --key-id $KEYID_EBS --policy-name default --output text --query Policy |
 python3 -c "
-import json
-import sys
+import json, sys
 
 statement_exists = False
 
@@ -43,4 +42,14 @@ if not statement_exists:
     print(json.dumps(current_policy))
 else:
     sys.exit(1)
-" > updated_policy.json && aws kms put-key-policy --key-id $KEYID_EBS --policy-name default --policy file://updated_policy.json
+")
+
+# Exit if the Python script failed (i.e., no update needed)
+if [ $? -ne 0 ]; then
+    echo "No update needed. Policy statement already exists."
+    exit 0
+fi
+
+# Write policy and apply it
+echo "$updated_policy" > updated_policy.json
+aws kms put-key-policy --key-id $KEYID_EBS --policy-name default --policy file://updated_policy.json
